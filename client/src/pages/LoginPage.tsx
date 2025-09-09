@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, User, Mail, Lock, CheckCircle, XCircle } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Lock, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface FormData {
   email: string;
@@ -14,6 +15,7 @@ interface FormErrors {
 }
 
 export const LoginPage: React.FC = () => {
+    const navigate = useNavigate()
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
@@ -69,7 +71,7 @@ export const LoginPage: React.FC = () => {
     setIsLoading(false);
 
     try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/signup`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -82,13 +84,13 @@ export const LoginPage: React.FC = () => {
             throw new Error(data.message || "Failed to create account")
         }
             setIsSuccess(true);
-            setTimeout(() => {
-      setIsSuccess(false);
+            //navigate success logic
+            navigate("/todo")
       setFormData({  email: '', password: '',});
-    }, 3000);
+   
     } catch (error) {
   if (error instanceof Error) {
-    console.log(error.message)
+    alert(error.message)
   } else {
     console.log("Unexpected error", error);
   }
@@ -98,17 +100,6 @@ export const LoginPage: React.FC = () => {
 
   };
 
-  if (isSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center animate-pulse">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Created!</h2>
-          <p className="text-gray-600">Welcome aboard! Your account has been successfully created.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center">
@@ -118,7 +109,6 @@ export const LoginPage: React.FC = () => {
             <User className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Login Here</h1>
-          <p className="text-gray-600">Join us today! Please fill in your details below.</p>
         </div>
 
         <div className="space-y-6">
