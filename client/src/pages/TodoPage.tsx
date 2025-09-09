@@ -16,96 +16,73 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Trash2, Edit, Plus, CheckCircle, Circle } from "lucide-react"
+import { Trash2, Edit, Plus, CheckCircle, Circle, LogOut } from "lucide-react"
+import { fetchWithAuth } from "@/hooks/fechWithAuth"
+import { useDispatch } from "react-redux"
+import { logout } from "@/redux/authSlice"
+import { useNavigate } from "react-router-dom"
 
 // Types
 interface TodoItem {
-  id: string
+  _id: string
   title: string
   description: string
-  status: "pending" | "completed"
-  createdAt: Date
-  updatedAt: Date
+  completed: boolean
+  createdAt: string
+  updatedAt: string
 }
-
 
 const todoAPI = {
   // Get all todos
   getTodos: async (): Promise<TodoItem[]> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const stored = localStorage.getItem("todos")
-        const todos = stored ? JSON.parse(stored) : []
-        resolve(todos)
-      }, 300)
-    })
+    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/todo`)
+    if (!response?.ok) {
+      throw new Error("Failed to fetch todos")
+    }
+    const data = await response.json()
+    return data.todos
   },
 
   // Create a new todo
   createTodo: async (data: { title: string; description: string }): Promise<TodoItem> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const newTodo: TodoItem = {
-          id: Date.now().toString(),
-          title: data.title,
-          description: data.description,
-          status: "pending",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
-
-        const stored = localStorage.getItem("todos")
-        const todos = stored ? JSON.parse(stored) : []
-        todos.push(newTodo)
-        localStorage.setItem("todos", JSON.stringify(todos))
-
-        resolve(newTodo)
-      }, 300)
+    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/todo/add-todo`, {
+      method: "POST",
+      body: JSON.stringify(data),
     })
+    if (!response?.ok) {
+      throw new Error("Failed to create todo")
+    }
+    const result = await response.json()
+    return result.todo
   },
 
   // Update a todo
   updateTodo: async (id: string, data: Partial<TodoItem>): Promise<TodoItem> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const stored = localStorage.getItem("todos")
-        const todos = stored ? JSON.parse(stored) : []
-        const index = todos.findIndex((todo: TodoItem) => todo.id === id)
-
-        if (index === -1) {
-          reject(new Error("Todo not found"))
-          return
-        }
-
-        todos[index] = { ...todos[index], ...data, updatedAt: new Date() }
-        localStorage.setItem("todos", JSON.stringify(todos))
-
-        resolve(todos[index])
-      }, 300)
+    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/todo/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
     })
+    if (!response?.ok) {
+      throw new Error("Failed to update todo")
+    }
+    const result = await response.json()
+    return result.todo
   },
 
   // Delete a todo
   deleteTodo: async (id: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const stored = localStorage.getItem("todos")
-        const todos = stored ? JSON.parse(stored) : []
-        const filteredTodos = todos.filter((todo: TodoItem) => todo.id !== id)
-
-        if (filteredTodos.length === todos.length) {
-          reject(new Error("Todo not found"))
-          return
-        }
-
-        localStorage.setItem("todos", JSON.stringify(filteredTodos))
-        resolve()
-      }, 300)
+    const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/todo/${id}`, {
+      method: "DELETE",
     })
+    if (!response?.ok) {
+      throw new Error("Failed to delete todo")
+    }
   },
 }
 
 export function TodoPage() {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -124,6 +101,7 @@ export function TodoPage() {
       setTodos(data)
     } catch (error) {
       console.error("Failed to load todos:", error)
+      alert("Failed to load todos. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -136,11 +114,12 @@ export function TodoPage() {
 
     try {
       const newTodo = await todoAPI.createTodo(formData)
-      setTodos((prev) => [...prev, newTodo])
+      setTodos((prev) => [newTodo, ...prev])
       setFormData({ title: "", description: "" })
       setIsCreateDialogOpen(false)
     } catch (error) {
       console.error("Failed to create todo:", error)
+      alert("Failed to create todo. Please try again.")
     }
   }
 
@@ -150,33 +129,48 @@ export function TodoPage() {
     }
 
     try {
-      const updatedTodo = await todoAPI.updateTodo(editingTodo.id, formData)
-      setTodos((prev) => prev.map((todo) => (todo.id === editingTodo.id ? updatedTodo : todo)))
+      const updatedTodo = await todoAPI.updateTodo(editingTodo._id, {
+        title: formData.title,
+        description: formData.description,
+      })
+      setTodos((prev) => prev.map((todo) => (todo._id === editingTodo._id ? updatedTodo : todo)))
       setFormData({ title: "", description: "" })
       setEditingTodo(null)
       setIsEditDialogOpen(false)
     } catch (error) {
       console.error("Failed to update todo:", error)
+      alert("Failed to update todo. Please try again.")
     }
   }
 
   const handleDeleteTodo = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this todo?")) {
+      return
+    }
+
     try {
       await todoAPI.deleteTodo(id)
-      setTodos((prev) => prev.filter((todo) => todo.id !== id))
+      setTodos((prev) => prev.filter((todo) => todo._id !== id))
     } catch (error) {
       console.error("Failed to delete todo:", error)
+      alert("Failed to delete todo. Please try again.")
     }
   }
 
   const handleToggleStatus = async (todo: TodoItem) => {
-    const newStatus = todo.status === "pending" ? "completed" : "pending"
     try {
-      const updatedTodo = await todoAPI.updateTodo(todo.id, { status: newStatus })
-      setTodos((prev) => prev.map((t) => (t.id === todo.id ? updatedTodo : t)))
+      const updatedTodo = await todoAPI.updateTodo(todo._id, { completed: !todo.completed })
+      setTodos((prev) => prev.map((t) => (t._id === todo._id ? updatedTodo : t)))
     } catch (error) {
       console.error("Failed to update todo status:", error)
+      alert("Failed to update todo status. Please try again.")
     }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken")
+    dispatch(logout())
+    navigate("/login")
   }
 
   const openEditDialog = (todo: TodoItem) => {
@@ -190,8 +184,8 @@ export function TodoPage() {
     setEditingTodo(null)
   }
 
-  const pendingTodos = todos.filter((todo) => todo.status === "pending")
-  const completedTodos = todos.filter((todo) => todo.status === "completed")
+  const pendingTodos = todos.filter((todo) => !todo.completed)
+  const completedTodos = todos.filter((todo) => todo.completed)
 
   if (loading) {
     return (
@@ -214,47 +208,55 @@ export function TodoPage() {
             <p className="text-muted-foreground mt-1">Manage your tasks efficiently</p>
           </div>
 
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Todo
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Todo</DialogTitle>
-                <DialogDescription>Add a new task to your todo list</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                    placeholder="Enter todo title"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Enter todo description (optional)"
-                    rows={3}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Cancel
+          <div className="flex gap-2">
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={resetForm} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Todo
                 </Button>
-                <Button onClick={handleCreateTodo}>Create Todo</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Todo</DialogTitle>
+                  <DialogDescription>Add a new task to your todo list</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                      placeholder="Enter todo title"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                      placeholder="Enter todo description (optional)"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreateTodo}>Create Todo</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Logout Button */}
+            <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -319,7 +321,7 @@ export function TodoPage() {
                 </Card>
               ) : (
                 pendingTodos.map((todo) => (
-                  <Card key={todo.id} className="hover:shadow-md transition-shadow">
+                  <Card key={todo._id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -347,7 +349,7 @@ export function TodoPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteTodo(todo.id)}
+                            onClick={() => handleDeleteTodo(todo._id)}
                             className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -376,7 +378,7 @@ export function TodoPage() {
                 </Card>
               ) : (
                 completedTodos.map((todo) => (
-                  <Card key={todo.id} className="hover:shadow-md transition-shadow opacity-75">
+                  <Card key={todo._id} className="hover:shadow-md transition-shadow opacity-75">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -406,7 +408,7 @@ export function TodoPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteTodo(todo.id)}
+                            onClick={() => handleDeleteTodo(todo._id)}
                             className="text-destructive hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />

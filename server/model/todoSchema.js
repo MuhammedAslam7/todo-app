@@ -1,4 +1,5 @@
 import mongoose from "mongoose"
+import { type } from "os"
 
 const todoSchema = new mongoose.Schema({
     title: {
@@ -8,10 +9,9 @@ const todoSchema = new mongoose.Schema({
     description: {
         type: String
     },
-    status: {
-        type: String,
-        enum: ["pending", "completed"],
-        default: "pending"
+    completed: {
+        type: Boolean,
+        default: false
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,

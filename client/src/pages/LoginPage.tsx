@@ -1,105 +1,109 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, User, Mail, Lock, XCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import type React from "react"
+import { useState } from "react"
+import { Eye, EyeOff, User, Mail, Lock, XCircle } from "lucide-react"
+import { Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
+import type { AppDispatch } from "@/redux/store"
+import { useDispatch } from "react-redux"
+import { loginSuccess } from "@/redux/authSlice"
 
 interface FormData {
-  email: string;
-  password: string;
-
+  email: string
+  password: string
 }
 
 interface FormErrors {
-  email?: string;
-  password?: string;
+  email?: string
+  password?: string
 }
 
 export const LoginPage: React.FC = () => {
-    const navigate = useNavigate()
+  const dispatch = useDispatch<AppDispatch>()
+  const navigate = useNavigate()
   const [formData, setFormData] = useState<FormData>({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
+  })
 
-  });
-
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
 
   const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
+    const newErrors: FormErrors = {}
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required"
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address"
     }
-
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required"
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = "Password must be at least 8 characters"
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+      newErrors.password = "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+
     if (errors[name as keyof FormErrors]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors((prev) => ({ ...prev, [name]: undefined }))
     }
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    e.preventDefault()
+
     if (!validateForm()) {
-      return;
+      return
     }
 
-    setIsLoading(true);
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsLoading(false);
+    setIsLoading(true)
 
     try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                email: formData.email,
-                password: formData.password
-            })
-        })
-        const data = await response.json()
-        if(!response.ok) {
-            throw new Error(data.message || "Failed to create account")
-        }
-            setIsSuccess(true);
-            //navigate success logic
-            navigate("/todo")
-      setFormData({  email: '', password: '',});
-   
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Include cookies for refresh token
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to login")
+      }
+
+      localStorage.setItem("accessToken", data.accessToken)
+      dispatch(
+        loginSuccess({
+          token: data.accessToken,
+          user: data.data.user,
+        }),
+      )
+
+      setIsSuccess(true)
+      navigate("/todo")
+      setFormData({ email: "", password: "" })
     } catch (error) {
-  if (error instanceof Error) {
-    alert(error.message)
-  } else {
-    console.log("Unexpected error", error);
-  }
-    }finally{
-        setIsLoading(false)
+      if (error instanceof Error) {
+        alert(error.message)
+      } else {
+        console.log("Unexpected error", error)
+      }
+    } finally {
+      setIsLoading(false)
     }
-
-  };
-
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center">
@@ -112,7 +116,6 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="space-y-6">
-
           <div className="space-y-1">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email Address
@@ -126,7 +129,7 @@ export const LoginPage: React.FC = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
-                  errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+                  errors.email ? "border-red-500 bg-red-50" : "border-gray-300 hover:border-gray-400"
                 }`}
                 placeholder="Enter your email address"
               />
@@ -134,9 +137,7 @@ export const LoginPage: React.FC = () => {
                 <XCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 w-5 h-5" />
               )}
             </div>
-            {errors.email && (
-              <p className="text-red-500 text-sm">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
           </div>
 
           <div className="space-y-1">
@@ -146,15 +147,15 @@ export const LoginPage: React.FC = () => {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 id="password"
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
                 className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ${
-                  errors.password ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+                  errors.password ? "border-red-500 bg-red-50" : "border-gray-300 hover:border-gray-400"
                 }`}
-                placeholder="Enter your pasword password"
+                placeholder="Enter your password"
               />
               <button
                 type="button"
@@ -164,11 +165,8 @@ export const LoginPage: React.FC = () => {
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
-        
-            
-            {errors.password && (
-              <p className="text-red-500 text-sm">{errors.password}</p>
-            )}
+
+            {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
           </div>
 
           <button
@@ -182,23 +180,22 @@ export const LoginPage: React.FC = () => {
                 Logging..
               </div>
             ) : (
-              'Log In'
+              "Log In"
             )}
           </button>
         </div>
 
         <div className="mt-4 text-center">
           <p className="text-gray-600 text-sm">
-            Dont't have an account?{' '}
+            Don't have an account?{" "}
             <Link to="/">
-            <button className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors duration-200">
-              Sign Up here
-            </button>
+              <button className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors duration-200">
+                Sign Up here
+              </button>
             </Link>
           </p>
         </div>
       </div>
     </div>
-  );
-};
-
+  )
+}
