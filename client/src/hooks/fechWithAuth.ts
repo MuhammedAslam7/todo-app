@@ -4,16 +4,16 @@ import { logout } from "@/redux/authSlice"
 export async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const accessToken = localStorage.getItem("accessToken")
 
-  const headers = {
-    ...options.headers,
-    Authorization: accessToken ? `Bearer ${accessToken}` : undefined,
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(options.headers as Record<string, string>), 
   }
 
   let response = await fetch(url, {
     ...options,
     headers,
-    credentials: "include", // Include cookies for refresh token
+    credentials: "include",
   })
 
   if (response.status === 401) {
@@ -26,11 +26,12 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
       const data = await refreshResponse.json()
       localStorage.setItem("accessToken", data.accessToken)
 
-      const retryHeaders = {
-        ...options.headers,
-        Authorization: `Bearer ${data.accessToken}`,
+      const retryHeaders: Record<string, string> = {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${data.accessToken}`,
+        ...(options.headers as Record<string, string>),
       }
+
       response = await fetch(url, {
         ...options,
         headers: retryHeaders,

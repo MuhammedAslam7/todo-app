@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,7 +20,6 @@ import { useDispatch } from "react-redux"
 import { logout } from "@/redux/authSlice"
 import { useNavigate } from "react-router-dom"
 
-// Types
 interface TodoItem {
   _id: string
   title: string
@@ -33,7 +30,6 @@ interface TodoItem {
 }
 
 const todoAPI = {
-  // Get all todos
   getTodos: async (): Promise<TodoItem[]> => {
     const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/todo`)
     if (!response?.ok) {
@@ -43,7 +39,6 @@ const todoAPI = {
     return data.todos
   },
 
-  // Create a new todo
   createTodo: async (data: { title: string; description: string }): Promise<TodoItem> => {
     const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/todo/add-todo`, {
       method: "POST",
@@ -56,7 +51,6 @@ const todoAPI = {
     return result.todo
   },
 
-  // Update a todo
   updateTodo: async (id: string, data: Partial<TodoItem>): Promise<TodoItem> => {
     const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/todo/${id}`, {
       method: "PUT",
@@ -69,7 +63,6 @@ const todoAPI = {
     return result.todo
   },
 
-  // Delete a todo
   deleteTodo: async (id: string): Promise<void> => {
     const response = await fetchWithAuth(`${import.meta.env.VITE_API_URL}/todo/${id}`, {
       method: "DELETE",
@@ -201,7 +194,6 @@ export function TodoPage() {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground">My Todo List</h1>
@@ -250,16 +242,12 @@ export function TodoPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-
-            {/* Logout Button */}
             <Button variant="outline" onClick={handleLogout} className="gap-2 bg-transparent">
               <LogOut className="h-4 w-4" />
               Logout
             </Button>
           </div>
         </div>
-
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>
             <CardContent className="p-6">
@@ -303,10 +291,7 @@ export function TodoPage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Todo Lists */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Pending Todos */}
           <div>
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Circle className="h-5 w-5 text-orange-600" />
@@ -362,8 +347,6 @@ export function TodoPage() {
               )}
             </div>
           </div>
-
-          {/* Completed Todos */}
           <div>
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
@@ -422,8 +405,6 @@ export function TodoPage() {
             </div>
           </div>
         </div>
-
-        {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
